@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm run build --workspace=packages/shared && tsc -p tsconfig.json",
+    "build": "cd ../../packages/shared && npx tsc -p tsconfig.json && cd ../../services/api && tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate --schema ../../prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
@@ -46,3 +46,4 @@
     "typescript": "^5.6.2"
   }
 }
+
