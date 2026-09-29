@@ -1,0 +1,27 @@
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+
+# Prisma
+prisma/migrations/dev.db
+
+# Flutter
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/build/
+apps/mobile/android/.gradle/
+apps/mobile/ios/Pods/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
