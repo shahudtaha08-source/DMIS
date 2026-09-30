@@ -6,7 +6,7 @@
   "description": "DMIS web app — React + TypeScript + Vite + Tailwind.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "cd ../../packages/shared && npx tsc -p tsconfig.json && cd ../../apps/web && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

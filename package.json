@@ -2,14 +2,14 @@
   "name": "dmis",
   "private": true,
   "version": "0.1.0",
-  "description": "Disaster Management Information System \u2014 npm workspaces monorepo (web + api + shared). Flutter app in apps/mobile is managed separately via pub, not npm.",
+  "description": "Disaster Management Information System — npm workspaces monorepo (web + api + shared). Flutter app in apps/mobile is managed separately via pub, not npm.",
   "workspaces": [
     "apps/web",
     "services/api",
     "packages/shared"
   ],
   "scripts": {
-    "//": "Scripts below are placeholders wired up as each chunk adds the corresponding app \u2014 see README.md for chunk status.",
+    "//": "Scripts below are placeholders wired up as each chunk adds the corresponding app — see README.md for chunk status.",
     "dev:api": "npm run dev --workspace=services/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "db:seed": "npm run db:seed --workspace=services/api",
@@ -25,6 +25,6 @@
     "verify": "npm run typecheck && npm run test && npm run build:web"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22 <23"
   }
 }
