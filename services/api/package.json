@@ -2,7 +2,7 @@
   "name": "@dmis/api",
   "version": "0.1.0",
   "private": true,
-  "description": "DMIS backend — Node.js + Express + TypeScript + Prisma.",
+  "description": "DMIS backend ï¿½ Node.js + Express + TypeScript + Prisma.",
   "main": "dist/server.js",
   "prisma": {
     "schema": "../../prisma/schema.prisma"
@@ -46,5 +46,3 @@
     "typescript": "^5.6.2"
   }
 }
-
-
