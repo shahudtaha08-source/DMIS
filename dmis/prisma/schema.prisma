@@ -1,0 +1,421 @@
+// DMIS — Prisma schema. Single source of truth for the database.
+// Mirrors docs/DATABASE_DESIGN.md. Enum names/values mirror
+// packages/shared/src/enums.ts one-for-one — do not add a status/severity
+// value here without adding it there too, and vice versa.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  OFFICER
+  VOLUNTEER
+}
+
+enum Severity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  REPORTED
+  VERIFIED
+  RESPONSE_ACTIVE
+  STABILIZED
+  RESOLVED
+}
+
+enum AlertSeverity {
+  CRITICAL
+  WARNING
+  ADVISORY
+  INFO
+}
+
+enum AlertStatus {
+  DRAFT
+  PUBLISHED
+  DEACTIVATED
+}
+
+enum ShelterStatus {
+  OPEN
+  FULL
+  CLOSED
+}
+
+enum ResourceStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum ResourceTransactionType {
+  RESTOCK
+  ALLOCATION
+  RETURN
+}
+
+enum TeamStatus {
+  AVAILABLE
+  DEPLOYED
+  OFF_DUTY
+}
+
+enum VolunteerStatus {
+  AVAILABLE
+  ASSIGNED
+  UNAVAILABLE
+}
+
+enum VictimStatus {
+  MISSING
+  INJURED
+  RESCUED
+  DECEASED
+  SAFE
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(OFFICER)
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  volunteer          Volunteer?
+  reportedIncidents  Incident[]           @relation("IncidentReportedBy")
+  createdAlerts      Alert[]              @relation("AlertCreatedBy")
+  reportedVictims    Victim[]             @relation("VictimReportedBy")
+  resourceTxns       ResourceTransaction[] @relation("ResourceTxnPerformedBy")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// One row per imported disasterIND.csv record. Read-only from the app's
+/// point of view — written only by prisma/imports/import-historical.ts.
+/// Field-by-field rationale: docs/DATASET_ANALYSIS.md.
+model HistoricalDisaster {
+  id                String   @id @default(cuid())
+  disNo             String   @unique
+  historic          Boolean
+  classificationKey String
+  disasterGroup     String
+  disasterSubgroup  String
+  disasterType      String
+  disasterSubtype   String?
+  externalIds       String?
+  eventName         String?
+  iso               String
+  country           String
+  subregion         String
+  region            String
+  location          String?
+  origin            String?
+  associatedTypes   String?
+  ofdaBhaResponse   Boolean
+  appeal            Boolean
+  declaration       Boolean
+
+  aidContributionUsd000 Decimal? @db.Decimal(18, 3)
+  magnitude             Decimal? @db.Decimal(18, 4)
+  magnitudeScale        String?
+  latitude              Decimal? @db.Decimal(9, 6)
+  longitude             Decimal? @db.Decimal(9, 6)
+  riverBasin            String?
+
+  startYear  Int
+  startMonth Int?
+  startDay   Int?
+  endYear    Int?
+  endMonth   Int?
+  endDay     Int?
+  /// Best-effort composite date for sorting/timeline UI only — missing
+  /// month/day defaulted to 01. Never treat as exact; see DATASET_ANALYSIS.md.
+  startDateApprox DateTime?
+  endDateApprox   DateTime?
+
+  totalDeaths   Int?
+  noInjured     Int?
+  noAffected    Int?
+  noHomeless    Int?
+  totalAffected Int?
+
+  reconstructionCostsUsd000    Decimal? @db.Decimal(18, 3)
+  reconstructionCostsAdjUsd000 Decimal? @db.Decimal(18, 3)
+  insuredDamageUsd000          Decimal? @db.Decimal(18, 3)
+  insuredDamageAdjUsd000       Decimal? @db.Decimal(18, 3)
+  totalDamageUsd000            Decimal? @db.Decimal(18, 3)
+  totalDamageAdjUsd000         Decimal? @db.Decimal(18, 3)
+  cpi                          Decimal? @db.Decimal(10, 4)
+
+  /// Raw source value is a JSON-array string, e.g.
+  /// [{"adm1_code":1511,"adm1_name":"West Bengal"}]; cardinality varies
+  /// per row so it is kept as Json, not flattened into columns.
+  adminUnitsRaw Json?
+
+  entryDate  DateTime?
+  lastUpdate DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([disasterType])
+  @@index([disasterSubgroup])
+  @@index([startYear])
+  @@index([latitude, longitude])
+  @@index([totalDamageUsd000])
+  @@map("historical_disasters")
+}
+
+model Incident {
+  id                          String         @id @default(cuid())
+  title                       String
+  description                 String
+  disasterType                String
+  severity                    Severity
+  status                      IncidentStatus @default(REPORTED)
+  latitude                    Decimal?       @db.Decimal(9, 6)
+  longitude                   Decimal?       @db.Decimal(9, 6)
+  location                    String
+  affectedPopulationEstimate  Int?
+
+  reportedById   String
+  reportedBy     User        @relation("IncidentReportedBy", fields: [reportedById], references: [id])
+  assignedTeamId String?
+  assignedTeam   RescueTeam? @relation(fields: [assignedTeamId], references: [id])
+
+  alerts       Alert[]
+  victims      Victim[]
+  resourceTxns ResourceTransaction[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  @@index([status])
+  @@index([severity])
+  @@index([latitude, longitude])
+  @@index([createdAt])
+  @@map("incidents")
+}
+
+model Alert {
+  id           String        @id @default(cuid())
+  title        String
+  message      String
+  severity     AlertSeverity
+  status       AlertStatus   @default(DRAFT)
+  affectedArea String
+  validFrom    DateTime
+  validUntil   DateTime
+
+  relatedIncidentId String?
+  relatedIncident   Incident? @relation(fields: [relatedIncidentId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("AlertCreatedBy", fields: [createdById], references: [id])
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([validUntil])
+  @@map("alerts")
+}
+
+model Shelter {
+  id                String        @id @default(cuid())
+  name              String
+  latitude          Decimal       @db.Decimal(9, 6)
+  longitude         Decimal       @db.Decimal(9, 6)
+  address           String
+  capacity          Int
+  currentOccupancy  Int           @default(0)
+  facilities        String[]
+  status            ShelterStatus @default(OPEN)
+  managerContact    String?
+
+  resources Resource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("shelters")
+}
+
+model Resource {
+  id                String          @id @default(cuid())
+  name              String
+  category          String
+  unit              String
+  quantityAvailable Int             @default(0)
+  lowStockThreshold Int             @default(0)
+  status            ResourceStatus  @default(AVAILABLE)
+
+  locationId String?
+  location   Shelter? @relation(fields: [locationId], references: [id])
+
+  transactions ResourceTransaction[]
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([category])
+  @@index([status])
+  @@map("resources")
+}
+
+/// Append-only ledger. Resource.quantityAvailable is maintained by the
+/// service layer from this ledger — never written to directly by a client.
+model ResourceTransaction {
+  id     String                  @id @default(cuid())
+  type   ResourceTransactionType
+  quantity Int
+
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id])
+
+  relatedIncidentId String?
+  relatedIncident   Incident? @relation(fields: [relatedIncidentId], references: [id])
+
+  performedById String
+  performedBy   User   @relation("ResourceTxnPerformedBy", fields: [performedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([resourceId])
+  @@index([createdAt])
+  @@map("resource_transactions")
+}
+
+model RescueTeam {
+  id                String     @id @default(cuid())
+  name              String
+  specialization    String
+  status            TeamStatus @default(AVAILABLE)
+  currentIncidentId String?
+  baseLocation      String?
+
+  incidents  Incident[]
+  volunteers Volunteer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("rescue_teams")
+}
+
+model Volunteer {
+  id     String          @id @default(cuid())
+  userId String?         @unique
+  user   User?           @relation(fields: [userId], references: [id])
+  name   String
+  phone  String
+  skills String[]
+  status VolunteerStatus @default(AVAILABLE)
+
+  teamId String?
+  team   RescueTeam? @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("volunteers")
+}
+
+model Victim {
+  id          String       @id @default(cuid())
+  incidentId  String?
+  incident    Incident?    @relation(fields: [incidentId], references: [id])
+  name        String?
+  age         Int?
+  gender      String?
+  status      VictimStatus @default(MISSING)
+  location    String?
+  contactInfo String?
+  notes       String?
+
+  reportedById String
+  reportedBy   User   @relation("VictimReportedBy", fields: [reportedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([incidentId])
+  @@map("victims")
+}
+
+model EmergencyContact {
+  id       String   @id @default(cuid())
+  name     String
+  role     String
+  phone    String
+  region   String
+  category String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([region])
+  @@map("emergency_contacts")
+}
+
+model Notification {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  title              String
+  body               String
+  relatedAlertId     String?
+  relatedAlert       Alert?   @relation(fields: [relatedAlertId], references: [id])
+  relatedIncidentId  String?
+  isRead             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
