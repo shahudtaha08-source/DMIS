@@ -1,0 +1,48 @@
+{
+  "name": "@dmis/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DMIS backend \u2014 Node.js + Express + TypeScript + Prisma.",
+  "main": "dist/server.js",
+  "prisma": {
+    "schema": "../../prisma/schema.prisma"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate --schema ../../prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "prisma:migrate:deploy": "prisma migrate deploy --schema ../../prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema ../../prisma/schema.prisma",
+    "db:import:historical": "tsx ../../prisma/imports/import-historical.ts",
+    "db:seed": "tsx ../../prisma/seed/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@dmis/shared": "*",
+    "@prisma/client": "^5.20.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pino": "^9.4.0",
+    "pino-http": "^10.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.7.4",
+    "pino-pretty": "^11.2.2",
+    "prisma": "^5.20.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}

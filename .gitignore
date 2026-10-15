@@ -1,0 +1,32 @@
+﻿# --- SECRETS-AND-LARGE-FILES ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+serviceAccount*.json
+/*.zip
+backup*.sql
+data/raw/
+data/models/
+*.pt
+*.onnx
+*.mat
+.cxx/
+.dart_tool/
+.venv-reference/
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.gradle/
+.idea/
+.vscode/
+*.log
+.DS_Store
+local.properties
+# --- END ---
