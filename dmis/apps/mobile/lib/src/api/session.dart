@@ -64,7 +64,9 @@ class Session extends ChangeNotifier {
     _lastError = null;
     final data = await _api.post('/auth/login', body: {'email': email.trim(), 'password': password});
     final json = data as Map<String, dynamic>;
-    final token = json['accessToken'] as String;
+    // The API's AuthResponseDTO is `{ token, user }` (packages/shared/src/models.ts).
+    // Accept `accessToken` as a legacy alias so an older API revision can still sign in.
+    final token = (json['token'] ?? json['accessToken']) as String;
     _api.token = token;
     _user = User.fromJson(json['user'] as Map<String, dynamic>);
     _lastError = null;

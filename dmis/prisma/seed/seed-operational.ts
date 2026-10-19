@@ -100,20 +100,22 @@ const RESOURCES = [
   { name: "Portable water purifier", category: "Water", unit: "units", quantityAvailable: 12, lowStockThreshold: 8, shelterName: "Kothrud Community Hall Shelter" },
 ];
 
-/** Non-production accounts so every role can be demonstrated. Passwords are
- *  environment-driven; nothing here is a real person or a real secret. */
+/** Non-production accounts so every role can be demonstrated. The password is
+ *  BOTH email- and environment-driven: no account is created without the
+ *  corresponding SEED_*_PASSWORD variable, so this file never ships a usable
+ *  credential. An existing account is reused as-is (never re-hashed). */
 const DEMO_USERS = [
   {
     email: (process.env.SEED_OFFICER_EMAIL ?? "officer@dmis.gov.in").toLowerCase(),
     name: "Priya Sharma",
     role: "OFFICER" as const,
-    password: process.env.SEED_OFFICER_PASSWORD ?? "Admin@12345",
+    password: process.env.SEED_OFFICER_PASSWORD,
   },
   {
     email: (process.env.SEED_VOLUNTEER_EMAIL ?? "volunteer@dmis.gov.in").toLowerCase(),
     name: "Arjun Verma",
     role: "VOLUNTEER" as const,
-    password: process.env.SEED_VOLUNTEER_PASSWORD ?? "Admin@12345",
+    password: process.env.SEED_VOLUNTEER_PASSWORD,
   },
 ];
 
@@ -129,6 +131,13 @@ async function seedUsers(): Promise<Record<string, string>> {
     const existing = await prisma.user.findUnique({ where: { email: u.email } });
     if (existing) {
       ids[u.role] = existing.id;
+      continue;
+    }
+    if (!u.password) {
+      console.warn(
+        `SEED_${u.role}_PASSWORD is not set — skipping the demo ${u.role} account (${u.email}). ` +
+          "Set it in .env to create the account."
+      );
       continue;
     }
     const created = await prisma.user.create({

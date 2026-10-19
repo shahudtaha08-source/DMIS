@@ -114,7 +114,12 @@ The API listens on http://localhost:4000 by default.
 ## Flutter startup
 
 1. Ensure Flutter SDK is installed and added to PATH.
-2. Configure the production or local API base URL in the app config.
+2. The API base URL is a compile-time define. Release builds default to
+   `https://dmis-api.onrender.com/api`, so no localhost address can leak into
+   a default release build; for the Android emulator use:
+
+   flutter run --dart-define=DMIS_API_URL=http://10.0.2.2:4000/api
+
 3. Run:
 
    flutter pub get
@@ -122,13 +127,21 @@ The API listens on http://localhost:4000 by default.
 
 ## Demo credentials
 
-Seeded admin and staff accounts for local demos:
+Nothing is hardcoded. The operational seed only creates the demo officer and
+volunteer accounts when the matching environment variable is set (and the
+password rule is: 8–72 characters containing a letter and a number):
 
-- Admin: admin@dmis.gov.in / Admin@12345
-- Officer: officer@dmis.gov.in / Admin@12345
-- Volunteer: volunteer@dmis.gov.in / Admin@12345
+- Admin: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
+- Officer: `SEED_OFFICER_EMAIL` / `SEED_OFFICER_PASSWORD`
+- Volunteer: `SEED_VOLUNTEER_EMAIL` / `SEED_VOLUNTEER_PASSWORD`
 
-Use the admin account to create and manage system records, and the officer or volunteer roles to test role-based access.
+If a password variable is missing, the script logs a warning and skips that
+account instead of falling back to a default. Existing accounts are never
+overwritten. The seed is idempotent and safe to re-run.
+
+Use the admin account to create and manage system records, and the officer or
+volunteer roles to test role-based access. Never commit real values — set them
+in the git-ignored `.env` (see `.env.example`).
 
 ## Production configuration
 
@@ -137,7 +150,7 @@ For production deployment, define real environment values for:
 - DATABASE_URL
 - JWT_SECRET
 - CORS_ORIGINS
-- API_PORT
+- API_PORT (falls back to Render's standard `PORT`, then 4000)
 - VITE_API_BASE_URL or equivalent web runtime configuration
 - Flutter API base URL config
 
@@ -147,7 +160,9 @@ Use Render for the backend and a static host or app host for the web frontend. N
 
 - Backend: deploy the Express API to Render with a PostgreSQL connection string and the JWT secret set in Render environment variables.
 - Web: build the React app for static hosting and set the deployed API URL as VITE_API_BASE_URL.
-- Mobile: point the Flutter app to the production API domain rather than localhost or 127.0.0.1.
+- Mobile: the release default is already the production API domain; override per build with `--dart-define=DMIS_API_URL=...`.
+- Mobile (Android release signing): copy `apps/mobile/android/key.properties.example` to `apps/mobile/android/key.properties` and fill in your keystore details. That file is git-ignored. Without it, a release build falls back to the debug key and warns you — do not distribute such an APK/AAB.
+- Static web hosts have no SPA fallback by default: the build now also emits `dist/404.html` (a copy of the app shell) so deep links such as `/incidents/123` survive a refresh. On Render, enable the equivalent "rewrite all routes to /index.html" setting for the static site if available.
 
 ## Final feature list
 

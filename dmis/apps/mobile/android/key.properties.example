@@ -1,0 +1,17 @@
+# Template for release signing — copy to android/key.properties and fill in real values.
+# key.properties, *.jks and *.keystore are git-ignored and must NEVER be committed.
+#
+# Create a keystore (one time, keep the file and passwords safe and backed up):
+#   keytool -genkeypair -v -keystore dmis-release.jks -keyalg RSA -keysize 2048 \
+#     -validity 10000 -alias dmis
+#
+# Then, for a REAL release build:
+#   flutter build apk --release --dart-define=DMIS_API_URL=https://dmis-api.onrender.com/api
+#
+# If this file is missing, the release build falls back to the debug signing key
+# and Gradle prints a warning — such an APK/AAB must not be distributed.
+
+storePassword=REPLACE_WITH_KEYSTORE_PASSWORD
+keyPassword=REPLACE_WITH_KEY_PASSWORD
+keyAlias=dmis
+storeFile=../dmis-release.jks

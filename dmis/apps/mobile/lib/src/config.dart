@@ -12,7 +12,7 @@ class AppConfig {
 
   static const String apiBaseUrl = String.fromEnvironment(
     'DMIS_API_URL',
-    defaultValue: 'http://10.0.2.2:4000/api',
+    defaultValue: 'https://dmis-api.onrender.com/api',
   );
 
   /// iOS simulators share the host's loopback interface; Android emulators do

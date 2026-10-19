@@ -6,7 +6,13 @@ dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  API_PORT: z.coerce.number().int().positive().default(4000),
+  // Prefer Render's standard PORT, then API_PORT, then 4000 — so the service
+  // binds the port the platform proxy actually expects.
+  API_PORT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(Number(process.env.PORT) || 4000),
   DATABASE_URL: z.string().optional(),
   JWT_SECRET: z.string().min(1).optional(),
   JWT_EXPIRES_IN: z.string().default("8h"),

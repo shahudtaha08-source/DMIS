@@ -86,7 +86,8 @@ Future<http.Response> _route(http.Request req) async {
       jsonEncode({
         'success': true,
         'data': {
-          'accessToken': 'jwt-abc',
+          // Real backend contract: AuthResponseDTO = { token, user }.
+          'token': 'jwt-abc',
           'user': {
             'id': 'u-1',
             'email': 'officer@dmis.gov.in',

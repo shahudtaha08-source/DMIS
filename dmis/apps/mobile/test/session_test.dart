@@ -122,7 +122,8 @@ void main() {
 http.Response _loginResponse() => http.Response(
       jsonEncode({
         'success': true,
-        'data': {'accessToken': 'jwt-abc', 'tokenType': 'Bearer', 'expiresIn': 3600, 'user': _userJson},
+        // Real backend contract: AuthResponseDTO = { token, user } (packages/shared/src/models.ts).
+        'data': {'token': 'jwt-abc', 'user': _userJson},
       }),
       200,
     );
