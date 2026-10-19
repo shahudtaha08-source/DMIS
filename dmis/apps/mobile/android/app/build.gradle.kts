@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -10,8 +12,12 @@ plugins {
 // When that file is absent — a fresh clone, or CI without secrets — the release
 // build falls back to the debug key so `flutter build apk --release` still runs,
 // and the app prints a warning at build time instead of failing silently.
+//
+// Note: `Properties` is imported rather than written as `java.util.Properties()`
+// — in a project build script the qualified form fails to resolve ("Unresolved
+// reference: util"), which broke every release build.
 val keystorePropertiesFile = rootProject.file("key.properties")
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 val hasReleaseSigning = keystorePropertiesFile.exists().also { exists ->
     if (exists) keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
@@ -41,10 +47,10 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties.getProperty("keyAlias") as String
+                keyPassword = keystoreProperties.getProperty("keyPassword") as String
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword") as String
             }
         }
     }

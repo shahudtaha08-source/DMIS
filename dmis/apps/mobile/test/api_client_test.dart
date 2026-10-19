@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dmis_mobile/src/api/api_client.dart';
@@ -78,6 +79,43 @@ void main() {
       await expectLater(
         client.get('/health'),
         throwsA(isA<ApiException>().having((e) => e.isNetwork, 'isNetwork', isTrue)),
+      );
+    });
+
+    test('a server that never answers is a TIMEOUT, not a connection error and not a hang', () async {
+      // Regression: a build pointing at an unreachable base URL (10.0.2.2:4000
+      // on a physical phone) produced exactly this path — the request was sent
+      // and never answered. The user must see the timeout wording, with a
+      // status of 0 so nothing downstream mistakes it for an HTTP reply.
+      final client = ApiClient(
+        httpClient: MockClient((_) => Completer<http.Response>().future),
+        baseUrl: 'https://dmis-api.onrender.com/api',
+        timeout: const Duration(milliseconds: 50),
+      );
+      await expectLater(
+        client.get('/auth/me'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.code, 'code', 'TIMEOUT')
+            .having((e) => e.isTimeout, 'isTimeout', isTrue)
+            .having((e) => e.isNetwork, 'isNetwork', isFalse)
+            .having((e) => e.isUnauthorized, 'isUnauthorized', isFalse)
+            .having((e) => e.statusCode, 'statusCode', 0)
+            .having((e) => e.message, 'message', 'The server took too long to respond. Check your connection and try again.')),
+      );
+    });
+
+    test('a 401 is reported as an HTTP status, never as a timeout or network failure', () async {
+      final client = _clientReturning(
+        http.Response(jsonEncode({'success': false, 'error': {'code': 'UNAUTHORIZED', 'message': 'Invalid email or password'}}), 401),
+      )..onUnauthorized = () {};
+      await expectLater(
+        client.post('/auth/login', body: {'email': 'a@b.test', 'password': 'x'}),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 401)
+            .having((e) => e.isUnauthorized, 'isUnauthorized', isTrue)
+            .having((e) => e.isTimeout, 'isTimeout', isFalse)
+            .having((e) => e.isNetwork, 'isNetwork', isFalse)
+            .having((e) => e.message, 'message', 'Invalid email or password')),
       );
     });
 

@@ -39,12 +39,17 @@ class Paged<T> {
 ///  * the bearer token is the same JWT the web client uses;
 ///  * a 401 means the token is gone or expired and the session must be cleared.
 class ApiClient {
-  ApiClient({http.Client? httpClient, String? baseUrl})
+  ApiClient({http.Client? httpClient, String? baseUrl, Duration? timeout})
       : _http = httpClient ?? http.Client(),
-        baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+        baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+        requestTimeout = timeout ?? AppConfig.requestTimeout;
 
   final http.Client _http;
   final String baseUrl;
+
+  /// Upper bound on a single request. Injectable so tests can exercise the
+  /// timeout path without waiting out [AppConfig.requestTimeout].
+  final Duration requestTimeout;
 
   /// Invoked when the server rejects the token, so the app can sign out from
   /// anywhere without every call site having to handle it.
@@ -83,7 +88,7 @@ class ApiClient {
   Future<dynamic> _send(Future<http.Response> Function() call) async {
     late http.Response response;
     try {
-      response = await call().timeout(AppConfig.requestTimeout);
+      response = await call().timeout(requestTimeout);
     } on TimeoutException {
       throw ApiException(0, 'TIMEOUT', 'The server took too long to respond. Check your connection and try again.');
     } on SocketException catch (e) {

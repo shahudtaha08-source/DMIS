@@ -14,8 +14,14 @@ class ApiException implements Exception {
   /// The user is authenticated but lacks the required role.
   bool get isForbidden => statusCode == 403;
 
-  /// The device could not reach the API at all.
+  /// The device could not reach the API at all (refused, blocked, unroutable).
   bool get isNetwork => code == 'NETWORK_ERROR';
+
+  /// The request was sent but no reply arrived before the configured request
+  /// timeout — a server that is asleep, cold-starting, or pointing at an
+  /// address that never answers. Kept distinct from [isNetwork] so the UI can
+  /// say "took too long" instead of "cannot reach".
+  bool get isTimeout => code == 'TIMEOUT';
 
   @override
   String toString() => message;
