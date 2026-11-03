@@ -25,6 +25,82 @@ const CSV_PATH = path.resolve(__dirname, "../../data/disasterIND.csv");
 
 type RawRow = Record<string, string>;
 
+const REQUIRED_HEADERS = [
+  "DisNo.",
+  "Historic",
+  "Classification Key",
+  "Disaster Group",
+  "Disaster Subgroup",
+  "Disaster Type",
+  "Disaster Subtype",
+  "External IDs",
+  "Event Name",
+  "ISO",
+  "Country",
+  "Subregion",
+  "Region",
+  "Location",
+  "Origin",
+  "Associated Types",
+  "OFDA/BHA Response",
+  "Appeal",
+  "Declaration",
+  "AID Contribution ('000 US$)",
+  "Magnitude",
+  "Magnitude Scale",
+  "Latitude",
+  "Longitude",
+  "River Basin",
+  "Start Year",
+  "Start Month",
+  "Start Day",
+  "End Year",
+  "End Month",
+  "End Day",
+  "Total Deaths",
+  "No. Injured",
+  "No. Affected",
+  "No. Homeless",
+  "Total Affected",
+  "Reconstruction Costs ('000 US$)",
+  "Reconstruction Costs, Adjusted ('000 US$)",
+  "Insured Damage ('000 US$)",
+  "Insured Damage, Adjusted ('000 US$)",
+  "Total Damage ('000 US$)",
+  "Total Damage, Adjusted ('000 US$)",
+  "CPI",
+  "Admin Units",
+  "Entry Date",
+  "Last Update",
+];
+
+function validateHeaders(headers: string[]): string[] {
+  const normalized = headers.map((header) => header.trim());
+  const blankColumns = normalized.flatMap((header, index) =>
+    header ? [] : [`column ${index + 1}`]
+  );
+  const duplicates = normalized.filter(
+    (header, index) => header !== "" && normalized.indexOf(header) !== index
+  );
+  const missing = REQUIRED_HEADERS.filter(
+    (header) => !normalized.includes(header)
+  );
+
+  if (blankColumns.length || duplicates.length || missing.length) {
+    const problems = [
+      blankColumns.length ? `blank headers: ${blankColumns.join(", ")}` : "",
+      duplicates.length
+        ? `duplicate headers: ${[...new Set(duplicates)].join(", ")}`
+        : "",
+      missing.length ? `missing required headers: ${missing.join(", ")}` : "",
+    ].filter(Boolean);
+
+    throw new Error(`Invalid disasterIND.csv header: ${problems.join("; ")}`);
+  }
+
+  return normalized;
+}
+
 function toBool(v: string | undefined): boolean {
   return (v ?? "").trim().toLowerCase() === "yes";
 }
@@ -78,7 +154,8 @@ function toJsonOrNull(v: string | undefined): Prisma.InputJsonValue | typeof Pri
 export async function main() {
   const raw = readFileSync(CSV_PATH, "utf-8");
   const rows: RawRow[] = parse(raw, {
-    columns: true,
+    bom: true,
+    columns: (headers) => validateHeaders(headers),
     skip_empty_lines: true,
   });
 
@@ -86,11 +163,12 @@ export async function main() {
 
   let failed = 0;
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
+    const sourceRecordNumber = rowIndex + 2; // Include the header record.
     const disNo = row["DisNo."]?.trim();
     if (!disNo) {
       failed++;
-      console.warn("Skipping row with no DisNo.:", row);
+      console.error(`CSV record ${sourceRecordNumber} skipped: missing DisNo.`);
       continue;
     }
 
@@ -168,13 +246,23 @@ export async function main() {
       });
     } catch (err) {
       failed++;
-      console.error(`Failed to import ${disNo}:`, err);
+      console.error(
+        `CSV record ${sourceRecordNumber} (DisNo. ${disNo}) failed:`,
+        err
+      );
     }
   }
 
   const existingBefore = await prisma.historicalDisaster.count();
   console.log(`\nImport finished. Rows in source CSV: ${rows.length}, failed: ${failed}.`);
   console.log(`HistoricalDisaster table now has ${existingBefore} rows.`);
+
+  if (failed > 0) {
+    throw new Error(
+      `Historical import failed: ${failed} of ${rows.length} source rows failed.`
+    );
+  }
+
   if (existingBefore !== rows.length - failed) {
     console.warn(
       "⚠ Row count mismatch — investigate before trusting historical analytics."
